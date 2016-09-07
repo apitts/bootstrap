@@ -242,9 +242,10 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
   }])
 
   .factory('$uibModalStack', ['$animate', '$animateCss', '$document',
-    '$compile', '$rootScope', '$q', '$$multiMap', '$$stackedMap', '$uibPosition',
-    function($animate, $animateCss, $document, $compile, $rootScope, $q, $$multiMap, $$stackedMap, $uibPosition) {
+    '$compile', '$rootScope', '$q', '$window', '$$multiMap', '$$stackedMap', '$uibPosition',
+    function($animate, $animateCss, $document, $compile, $rootScope, $q, $window, $$multiMap, $$stackedMap, $uibPosition) {
       var OPENED_MODAL_CLASS = 'modal-open';
+      var MEASURE_SCROLLBAR_CLASS = 'modal-scrollbar-measure';
 
       var backdropDomEl, backdropScope;
       var openedWindows = $$stackedMap.createNew();
@@ -252,6 +253,7 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
       var $modalStack = {
         NOW_CLOSING_EVENT: 'modal.stack.now-closing'
       };
+      var scrollbarWidth = 0;
       var topModalIndex = 0;
       var previousTopOpenedModal = null;
 
@@ -261,6 +263,37 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
         'iframe, object, embed, *[tabindex]:not([tabindex=\'-1\']), *[contenteditable=true]';
       var scrollbarPadding;
       var SNAKE_CASE_REGEXP = /[A-Z]/g;
+      var bodyEl = angular.element($document[0].body);
+
+      // From twbs/bootstrap modal
+      function checkScrollbar() {
+        if (bodyEl[0].clientWidth >= $window.innerWidth) { scrollbarWidth=0; return; }
+        scrollbarWidth = scrollbarWidth || measureScrollbar();
+      }
+
+      // From twbs/bootstrap modal
+      function measureScrollbar() {
+        var scrollDiv = angular.element('<div class="'+MEASURE_SCROLLBAR_CLASS+'"></div>');
+        bodyEl.append(scrollDiv);
+        var width = scrollDiv[0].offsetWidth - scrollDiv[0].clientWidth;
+        scrollDiv.remove();
+        return width;
+      }
+
+      // From twbs/bootstrap modal
+      function setScrollbar() {
+        if (scrollbarWidth) {
+          var bodyPad = parseInt(bodyEl.css('padding-right') || 0, 10);
+          bodyEl.css('padding-right', bodyPad + scrollbarWidth + 'px');
+          angular.element(document.getElementsByClassName('manual-modal-padding')).css('padding-right', bodyPad + scrollbarWidth + 'px');
+        }
+      }
+
+      // From twbs/bootstrap modal
+      function resetScrollbar(){
+        bodyEl.css('padding-right', '');
+        angular.element(document.getElementsByClassName('manual-modal-padding')).css('padding-right', '');
+      }
 
       // TODO: extract into common dependency with tooltip
       function snake_case(name) {
@@ -325,6 +358,7 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
           }
           toggleTopWindowClass(true);
         }, modalWindow.closedDeferred);
+        if (openedWindows.length() === 0) { resetScrollbar(); }
         checkRemoveBackdrop();
 
         //move focus to specified element if available, or else to body
@@ -503,6 +537,7 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
               appendToElement.css({paddingRight: scrollbarPadding.right + 'px'});
             }
           }
+          checkScrollbar();
         }
 
         var content;
@@ -555,6 +590,7 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
 
         openedWindows.top().value.modalDomEl = angularDomEl;
         openedWindows.top().value.modalOpener = modalOpener;
+        setScrollbar();
       };
 
       function broadcastClosing(modalWindow, resultOrReason, closing) {
