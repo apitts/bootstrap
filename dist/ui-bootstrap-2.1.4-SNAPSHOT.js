@@ -3936,9 +3936,9 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
             }
             scrollbarPadding = null;
           }
+          if (openedWindows.length() === 0) { resetScrollbar(); }
           toggleTopWindowClass(true);
         }, modalWindow.closedDeferred);
-        if (openedWindows.length() === 0) { resetScrollbar(); }
         checkRemoveBackdrop();
 
         //move focus to specified element if available, or else to body
